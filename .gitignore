@@ -4,6 +4,8 @@ dist/
 *.tmp-*
 .DS_Store
 
-# Local extraction experiments and source documents
-experiments/
-*.pdf
+# Local source exports and generated pipeline artifacts
+/*.html
+/*.pdf
+/articles/
+/experiments/

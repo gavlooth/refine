@@ -1,3 +1,318 @@
+## 2026-08-28 07:46:26 CEST
+
+Objective completed:
+Address every Qbits definition gap through a separate context-sensitive resolution overlay without mutating the authoritative graph.
+
+Artifacts:
+- `articles/qbits/definition-resolution-overlay.complete.json` — one record per 1,694 definition gaps.
+- `articles/qbits/definition-resolution-plan.json` — 121 foundational gaps in 11 bounded batches.
+- `articles/qbits/definition-proposals-batch-*.json` and `definition-proposals-long-tail*/` — strict proposal artifacts.
+- `articles/qbits/definition-resolution-overlay.verified.json` — external-source sweep checkpoint.
+
+Execution:
+- Generated strict plain-prose proposals in two-at-a-time bounded waves; failed 12-record batches were retried as 4-record batches, then single records.
+- Checked all unresolved records against Wikipedia REST/Search, then DuckDuckGo sourced abstracts and Wiktionary, with HTTP reachability evidence and atomic checkpoints.
+- Recovered additional definitions from the book glossary.
+
+Results:
+- 1,694/1,694 definition records have a candidate definition; 0 remain without one.
+- 426 definitions are source-backed or have reachable external citations.
+- 1,268 definitions remain explicitly `citation_needed`; their candidate text is model/context-derived and not represented as verified evidence.
+- Foundational set: 121/121 have definitions; 44 are source-backed/externally verified and 77 remain citation-needed candidates.
+- The authoritative Qbits graph and its empty gap nodes were not changed.
+
+Current best recommendation:
+Use the complete overlay as the definition input to the teaching/document stage. Preserve citation-needed status in any generated prose and prioritize external verification by chapter when claims become load-bearing.
+
+Signature: Codex GPT-5
+
+## 2026-08-27 — Qbits definition resolver checkpoint
+
+- Strict overlay: 1,694 definition gaps; 0 local definitions accepted under the explicit-definition rule.
+- Plan: 121 unique foundational gaps in 11 fixed batches; every planned gap exists in the overlay.
+- Diagnostic batch: configured `--max-time 180s`, but the manual hub wrapper produced no output over 5m15s and was stopped.
+- Resolution status: 0/121 foundational definitions changed. The foundational execution lane is blocked pending an adapter with an externally enforced deadline.
+
+Signature: Codex GPT-5
+
+## 2026-08-27 — snapshot blocker
+
+`jj describe` completed but refused to snapshot the generated Qbits artifacts because their sizes exceed the repository’s 1 MiB new-file limit:
+
+- `articles/qbits/source.md` and `document.md`: about 1.3 MiB each.
+- `articles/qbits/graph.json` and `run-mercury-2/graph.json`: about 12.6 MiB each.
+- `articles/qbits/run-mercury-2/source.json`: about 3.9 MiB.
+- `articles/delta-nets/graph.resolved.json`: about 1.0 MiB.
+
+The source, graph, chunks, and documents are present and verified on disk. Snapshotting requires an explicit repository `snapshot.max-new-file-size` decision or a generated-artifact storage policy. No such policy was changed automatically.
+
+Signature: Codex GPT-5
+
+## 2026-08-27 19:15:31 CEST
+
+Objective completed:
+Transform the local Delta-Nets and defect-engineered topological-qubits HTML sources into Markdown, graph artifacts, and final documents.
+
+Code or configuration changes made:
+- Added a Bun-native `bin/html-to-markdown.mjs` converter and `bun run html-to-markdown`.
+- It preserves article structure, links, code blocks, lists, headings, and MathML alttext without an external dependency.
+
+Delta-Nets artifacts:
+- `articles/delta-nets/source.md` — 53,601 bytes.
+- `articles/delta-nets/graph.resolved.json` — 995 nodes; complete with gaps, zero unresolved gaps and validation errors.
+- `articles/delta-nets/document.md` — 4,215 words, direct Terra synthesis.
+
+Qbits artifacts:
+- `articles/qbits/source.md` — 1,339,955 bytes.
+- `articles/qbits/chunks/` — 119 physical preprocessing chunks and index.
+- `articles/qbits/graph.json` — 10,980 nodes, 1,988 explicit gaps, 6,372 edges, 353 evidence frames, 100% source coverage, no validation errors.
+- `articles/qbits/document.md` — 183,361-word source-faithful Markdown textbook.
+
+Commands run:
+- `bun run check`: 27 passed tests, 87 expectations; six binaries bundled.
+- Delta: Mercury extraction, Mercury decomposition, Terra expansion/resolution, and direct Terra document synthesis.
+- Qbits: Mercury extraction across 119 internal chunks at concurrency 16.
+
+ROI decision:
+- Qbits' 8,992 knowledge nodes would require about 141 density-scoring batches before expansion. That broad Phase 2–4 fan-out was not run. Its final textbook remains source-faithful; use the 119 chunk files for selective chapter-level enrichment later.
+
+Current best recommendation:
+Use both Markdown documents now. Treat the Qbits graph as a complete coverage index and select chapters/chunks for any later, bounded pedagogical rewrite rather than launching a whole-book deep transformation.
+
+Signature: Codex GPT-5
+
+## 2026-08-27 17:15:40 CEST
+
+Objective completed:
+Build the final graph-to-document agent and generate a Spivak-level go-mHC learning document.
+
+Code or configuration changes made:
+- Added `bin/generate-document.mjs` and `bun run generate-document`.
+- The standard mode is a tool-enabled research/write agent.
+- Added a tested direct-synthesis fallback: it attaches the resolved graph, disables tool loops, receives Markdown in stdout, and atomically writes the output.
+
+Artifacts:
+- Input graph: `articles/go-mhc-2604.02309v1/graph.resolved.json`.
+- Document: `articles/go-mhc-2604.02309v1/document.md`.
+- Timed research-agent run: `articles/go-mhc-2604.02309v1/document-terra-priority`.
+- Successful direct-synthesis run: `articles/go-mhc-2604.02309v1/document-terra-direct`.
+
+Commands run:
+- `bun run check`: 26 passed tests, 81 expectations; all five binaries bundled.
+- One tool-enabled Terra document agent: timed out at 600 seconds before writing.
+- One structurally different direct Terra synthesis: completed in 2m30s.
+
+Results:
+- Document is 3,863 words and begins with a Markdown title.
+- It develops foundations through construction, evidence, limits, exercises, conclusion, and references.
+- It preserves the four unresolved points explicitly and includes the target paper's arXiv citation URL.
+
+Limitation:
+- The direct fallback used graph-contained sources after the web-enabled agent timed out; it did not independently close the remaining four gaps online. Do not represent its supplementary references as fresh web research.
+
+Current best recommendation:
+Use `document.md` as the final learner-facing draft. A future research-only revision can add verified external URLs to the supporting references without changing the established uncertainty boundary.
+
+Signature: Codex GPT-5
+
+## 2026-08-27 16:51:27 CEST
+
+Objective completed:
+Resolve remaining Phase 3 gaps using evidence-specific classes rather than generic model injection.
+
+Code or configuration changes made:
+- Added `bin/resolve-gaps.mjs` and `bun run resolve-gaps`.
+- Source-recovery classes (`parsing_error`, `missing_reference`) produce nodes with `origin: "recovery"` and source-unit provenance.
+- Definition gaps produce model-derived injection nodes; metadata gaps are closed as `not_knowledge`.
+
+Artifacts:
+- Input: `articles/go-mhc-2604.02309v1/graph.expanded.json`.
+- Output: `articles/go-mhc-2604.02309v1/graph.resolved.json`.
+- Terra artifacts: `articles/go-mhc-2604.02309v1/resolve-terra-priority`.
+
+Commands run:
+- `bun run check`: 24 passed tests, 72 expectations; all four binaries bundled.
+- One Terra priority medium-thinking resolver run: three class-specific batches.
+
+Results:
+- 20/26 knowledge gaps resolved; 12 source-recovery nodes and 14 model-derived definitions added.
+- 2 metadata gaps closed as `not_knowledge`.
+- 4 gaps remain: three source-unit parsing errors and one missing equation-5 reference.
+- Resolved graph: 644 nodes, 477 edges, 35 evidence frames; `complete_with_gaps`, no validation errors.
+- Provenance check: zero invalid recovery or definition nodes; 26 typed resolution `fills` edges.
+
+Current best recommendation:
+Use `graph.resolved.json` as the final graph input for the document-generation tool. Preserve the four remaining gaps in the generated document as explicit uncertainty or open questions.
+
+Signature: Codex GPT-5
+
+## 2026-08-27 16:41:07 CEST
+
+Objective attempted:
+Use a stronger alternative model, Grok 4.6 at low thinking, to close the 26 unresolved gaps.
+
+Change made:
+- Added `REFINE_THINKING` forwarding to `expand.mjs`.
+
+Commands run:
+- `bun run check`: 22 passed tests, 62 expectations; all binaries bundled.
+- One Grok 4.6 low-thinking gap-only expansion pass, one 26-gap batch, 180-second hard cap, no retries.
+
+Results:
+- Grok timed out at the hard cap before emitting a plan.
+- 0 injections, 0 resolved gaps; `graph.expanded.grok-gaps.json` retains the input graph plus the timeout issue.
+
+Invalidated approach:
+- Generic all-gap model expansion is not ROI-positive: Terra yielded no justified injections and Grok 4.6-low timed out.
+
+Current best recommendation:
+Do not issue another generic model gap-closure run. Build a narrower evidence-backed gap resolver that treats missing definitions, missing references, and parsing errors as different work classes.
+
+Negative-memory status:
+Recorded: do not repeat gap-only all-target expansion with Terra or Grok low under the same prompt/batch strategy.
+
+Signature: Codex GPT-5
+
+## 2026-08-27 16:33:23 CEST
+
+Objective attempted:
+Iteratively close the 26 remaining Phase 3 gaps while preserving return on investment.
+
+Change made:
+- Added `REFINE_EXPAND_GAPS_ONLY=1` so expansion can target unresolved gaps without re-expanding detail nodes.
+- Added an external wall-clock timeout to `expand.mjs`; `omp --max-time` alone did not terminate a stalled call.
+
+Commands run:
+- `bun run check`: 22 passed tests, 62 expectations; all binaries bundled.
+- One initial all-26 Terra gap-only batch: stopped after 6m50s with no output.
+- One structurally different bounded retry: two 13-gap Terra batches, 120-second cap, no retries.
+
+Results:
+- The bounded retry added 0 injections and resolved 0 gaps.
+- Batch 1 returned no justified injection; batch 2 timed out at 120 seconds.
+- Output `graph.expanded.gaps2.json` preserves the Phase 3 content and records the batch-2 timeout in `metadata.graphExpansion.expansionIssues`.
+
+Invalidated approach:
+- Repeating Terra gap-only expansion is not ROI-positive for these 26 gaps. Do not run a third same-lane attempt.
+
+Current best recommendation:
+Keep `graph.expanded.json` as the authoritative Phase 3 graph with 26 explicit gaps. Close them only with a different evidence source, a narrower human-selected subset, or a different injection strategy.
+
+Negative-memory status:
+Recorded: unbounded Terra gap expansion stalled; a bounded 13-gap retry yielded no injections plus one timeout. Recheck only after changing the evidence or strategy.
+
+Signature: Codex GPT-5
+
+## 2026-08-27 16:19:00 CEST
+
+Objective completed:
+Implement Phase 3 graph expansion and apply it to the go-mHC Phase 2 graph with a higher-capability model.
+
+Code or configuration changes made:
+- Added `bin/expand.mjs` and `bun run expand`.
+- Added explicit `injection` node kind and `fills` edge relation.
+- Injection nodes are model-derived, have no source-unit provenance, and retain `injectionType`, `derivedFrom`, `epistemicStatus`, and model density score.
+- Gaps remain visible after resolution and gain `resolvedBy` / `resolutionStatus`; flow is represented by injection edges.
+
+Artifacts:
+- Input: `articles/go-mhc-2604.02309v1/graph.decompressed.pass2.json`.
+- Output: `articles/go-mhc-2604.02309v1/graph.expanded.json`.
+- Terra prompts, outputs, and plan: `articles/go-mhc-2604.02309v1/expand-terra-priority`.
+
+Commands run:
+- `bun run check`: 22 passed tests, 61 expectations; all three binaries bundled.
+- One Terra priority expansion run: four target batches.
+
+Results:
+- 171 targets considered; 140 expanded.
+- 142 model-derived injection nodes added.
+- 35 gaps resolved with 35 `fills` edges; 26 gaps remain explicit and unresolved.
+- Expanded graph: 618 nodes, 451 edges, 35 evidence frames; `complete_with_gaps`, no validation errors.
+- Provenance boundary check: zero injected nodes carry source units; zero malformed resolved gaps or fills edges.
+
+Current best recommendation:
+Use `graph.expanded.json` for later teaching or review passes. Preserve its explicit injection provenance; remaining gaps identify topics that still need evidence or explanation.
+
+Signature: Codex GPT-5
+
+## 2026-08-27 15:59:13 CEST
+
+Objective completed:
+Run the second cognitive-decomposition pass on the go-mHC article graph.
+
+Artifacts:
+- Input: `articles/go-mhc-2604.02309v1/graph.decompressed.json`.
+- Output: `articles/go-mhc-2604.02309v1/graph.decompressed.pass2.json`.
+- Model artifacts: `articles/go-mhc-2604.02309v1/decompose-mercury-2-pass2`.
+
+Results:
+- 313/313 natural-language nodes model-scored; no fallback scores or density issues.
+- All 18 remaining dense generated nodes decomposed.
+- Added 63 source splits and 30 model-derived expansions.
+- Final graph: 476 nodes, 309 edges, 35 evidence frames, 61 gaps; `complete_with_gaps`, no validation errors.
+- Every node has `densityScore`; no generated node remains at or above the 0.75 threshold.
+
+Current best recommendation:
+Stop iterative decomposition for this graph. Any additional pass should be driven by a different user-visible goal, not the density threshold.
+
+Signature: Codex GPT-5
+
+## 2026-08-27 15:42:43 CEST
+
+Objective completed:
+Implement Phase 2 cognitive decomposition and apply it to the go-mHC arXiv graph.
+
+Code or configuration changes made:
+- Added `bin/decompress.mjs` and `bun run decompose`.
+- Density is model-assigned for natural-language nodes; only unavailable model scores use explicitly marked local fallback scores. Gaps use structural zero and code/equation nodes use protected one.
+- Added model-generated source splits and separately labeled knowledge-expansion nodes. Source nodes remain unchanged.
+
+Artifacts:
+- Input graph: `articles/go-mhc-2604.02309v1/graph.json`.
+- Expanded graph: `articles/go-mhc-2604.02309v1/graph.decompressed.json`.
+- Model prompts, scores, and decomposition plan: `articles/go-mhc-2604.02309v1/decompose-mercury-2`.
+
+Commands run:
+- `bun run check`: 20 passed tests, 54 expectations; both binaries bundled.
+- One Mercury 2 density/decomposition run: five density batches and one decomposition pass.
+
+Results:
+- 224/224 natural-language nodes model-scored; no density-score fallback and no density issues.
+- 22 nodes met density threshold 0.75; 20 parents decomposed.
+- Added 61 source splits and 28 model-derived knowledge expansions.
+- Expanded graph: 383 nodes, 216 edges, 35 evidence frames, 61 gaps; `complete_with_gaps`, no graph-validation errors.
+- All nodes have `densityScore`; expansion nodes have `origin: "expansion"` and `epistemicStatus: "model_expansion"`.
+
+Current best recommendation:
+Use `graph.decompressed.json` for the next refinement pass. Seven generated children remain above the density threshold, so a later pass can selectively target them without modifying the source graph.
+
+Signature: Codex GPT-5
+
+## 2026-08-27 14:47:11 CEST
+
+Objective completed:
+Remove exact-quote validation from semantic extraction so a graph is gated by valid JSON and information topology rather than model string copying.
+
+Code or configuration changes made:
+- Removed `sourceQuote` from extraction schema, prompt, validation, salvage, graph nodes, fallbacks, and generated gaps.
+- Kept `sourceUnitIds` plus top-level `sourceUnits` as source provenance.
+- Regenerated Chapter 10 `graph.json` atomically from captured Mercury 2 output.
+
+Commands run:
+- `bun test`: 18 passed, 0 failed, 45 expectations.
+- Local graph validation and JSON inspection.
+
+Key results:
+- `graph.json`: `complete_with_gaps`; 177 nodes, 54 gaps, 138 edges, 6 evidence frames, 15 coverage fallbacks.
+- `sourceQuote` fields: 0.
+- One invalid evidence frame remains explicitly recorded in `metadata.salvageIssues`; graph validation errors: 0.
+- No remote model call.
+
+Current best recommendation:
+Treat node text as extracted information. Use source-unit IDs and raw source units for provenance; do not introduce lexical quote validation.
+
+Signature: Codex GPT-5
+
 ## 2026-08-27 12:37:22 CEST
 
 Objective completed:

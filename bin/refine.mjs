@@ -9,8 +9,8 @@ import { dirname, resolve } from "node:path";
 
 const GRAPH_SCHEMA_VERSION = "knowledge-graph/v3-cognitive-decompression";
 const PROTECTED_UNIT_KINDS = new Set(["code", "equation"]);
-const NODE_KINDS = new Set(["claim", "definition", "procedure", "requirement", "evidence", "example", "equation", "code", "topic", "source", "gap"]);
-const EDGE_RELATIONS = new Set(["enables", "supports", "elaborates", "exemplifies", "contrasts", "part_of", "precedes", "defines"]);
+const NODE_KINDS = new Set(["claim", "definition", "procedure", "requirement", "evidence", "example", "equation", "code", "topic", "source", "gap", "expansion", "injection"]);
+const EDGE_RELATIONS = new Set(["enables", "supports", "elaborates", "exemplifies", "contrasts", "part_of", "precedes", "defines", "fills"]);
 
 function integerEnv(name, fallback, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) {
   const raw = Bun.env[name];
@@ -41,7 +41,6 @@ const EXTRACTION_SCHEMA = {
         properties: {
           kind: { type: "string" }, text: { type: ["string", "null"] },
           sourceUnitIds: { type: "array", items: { type: "string" } },
-          sourceQuote: { type: "string" },
           defines: { type: "array", items: { type: "string" } },
           requires: { type: "array", items: { type: "string" } },
           mentions: { type: "array", items: { type: "string" } },
@@ -94,9 +93,9 @@ Rules:
 - Rewrite each source idea as the simplest accurate standalone statement. Do not preserve dense source phrasing.
 - Emit one small node per independent claim, definition, procedure step, piece of evidence, example, equation, or code block.
 - Split enumerations, contrasts, and workflows into sparse local nodes. Never compress a workflow or taxonomy into one heavy node.
-- Ground every source-derived node in sourceUnitIds. For prose, sourceQuote must be a short exact contiguous substring copied byte for byte; never paraphrase it or insert ellipses. Use an empty string if no short exact quote is useful.
+- Ground every source-derived node in sourceUnitIds. Source units carry raw provenance; node text is extracted semantic content, not a quotation.
 - Every source unit must be represented by at least one node.
-- For code and equation units, emit a dedicated node with those sourceUnitIds and leave sourceQuote empty. Do not copy or reformat the unit text; the assembler inserts the source bytes.
+- For code and equation units, emit a dedicated node with those sourceUnitIds. Do not copy or reformat the unit text; the assembler inserts the source bytes.
 - Never invent measurements, results, citations, or paper-specific claims.
 - defines and requires contain canonical concept names, not Markdown spellings. Expand an acronym to its standard name when the expansion is known from the source.
 - requires lists concepts that must be understood before the node; mentions lists non-prerequisite concepts.
@@ -267,15 +266,12 @@ function validateExtraction(value, chunk) {
     if (!gap && !sourceUnitIds.length) throw new Error(`source node ${index} has no sourceUnitIds`);
     for (const unitId of sourceUnitIds) if (!unitById.has(unitId)) throw new Error(`node ${index} references unknown source unit ${unitId}`);
     const protectedUnits = sourceUnitIds.map((unitId) => unitById.get(unitId)).filter((unit) => PROTECTED_UNIT_KINDS.has(unit.kind));
-    let sourceQuote = typeof node.sourceQuote === "string" ? node.sourceQuote.trim() : "";
     if (!gap && sourceUnitIds.length === 1 && protectedUnits.length === 1 && kind === protectedUnits[0].kind && PROTECTED_UNIT_KINDS.has(kind)) {
       text = protectedUnits[0].text;
-      sourceQuote = "";
     }
     if (!gap && text === null) throw new Error(`knowledge node ${index} has no text`);
-    if (sourceQuote && !sourceUnitIds.some((unitId) => unitById.get(unitId).text.includes(sourceQuote))) throw new Error(`node ${index} sourceQuote is not present in its source units`);
     return {
-      kind, text, need, gapType, sourceUnitIds, sourceQuote,
+      kind, text, need, gapType, sourceUnitIds,
       defines: normalizeConcepts(Array.isArray(node.defines) ? node.defines : []),
       requires: normalizeConcepts(Array.isArray(node.requires) ? node.requires : []),
       mentions: normalizeConcepts(Array.isArray(node.mentions) ? node.mentions : []),
@@ -378,7 +374,6 @@ function salvageFailedChunk(chunk, error) {
       kind: "gap",
       text: null,
       sourceUnitIds: chunk.units.map((unit) => unit.id),
-      sourceQuote: "",
       defines: [],
       requires: [],
       mentions: [],
@@ -417,14 +412,8 @@ function salvageExtraction(value, chunk) {
       return false;
     });
     const protectedUnits = sourceUnitIds.map((unitId) => unitById.get(unitId)).filter((unit) => PROTECTED_UNIT_KINDS.has(unit.kind));
-    let sourceQuote = typeof node.sourceQuote === "string" ? node.sourceQuote.trim() : "";
     if (!gap && sourceUnitIds.length === 1 && protectedUnits.length === 1 && kind === protectedUnits[0].kind && PROTECTED_UNIT_KINDS.has(kind)) {
       text = protectedUnits[0].text;
-      sourceQuote = "";
-    }
-    if (sourceQuote && !sourceUnitIds.some((unitId) => unitById.get(unitId).text.includes(sourceQuote))) {
-      sourceQuote = "";
-      annotations.push("quote_mismatch");
     }
     if (gap && (text !== null || !need || !gapType)) {
       text = null;
@@ -442,7 +431,7 @@ function salvageExtraction(value, chunk) {
     const origin = kind === "gap" ? "gap" : "source";
     indexMap.set(index, nodes.length);
     nodes.push({
-      kind, text: kind === "gap" ? null : text, need, gapType, sourceUnitIds, sourceQuote,
+      kind, text: kind === "gap" ? null : text, need, gapType, sourceUnitIds,
       defines: normalizeConcepts(Array.isArray(node.defines) ? node.defines : []),
       requires: normalizeConcepts(Array.isArray(node.requires) ? node.requires : []),
       mentions: normalizeConcepts(Array.isArray(node.mentions) ? node.mentions : []),
@@ -481,7 +470,7 @@ function addCoverageFallbacks(extraction, chunk) {
     const exactProtected = PROTECTED_UNIT_KINDS.has(unit.kind) && extraction.nodes.some((node) => node.sourceUnitIds.includes(unit.id) && node.text === unit.text);
     if (!covered.has(unit.id) || (PROTECTED_UNIT_KINDS.has(unit.kind) && !exactProtected)) {
       extraction.nodes.push({
-        kind: sourceKindToNodeKind(unit.kind), text: unit.text, sourceUnitIds: [unit.id], sourceQuote: unit.kind === "prose" ? unit.text.slice(0, 240) : "",
+        kind: sourceKindToNodeKind(unit.kind), text: unit.text, sourceUnitIds: [unit.id],
         defines: [], requires: [], mentions: [], fills: [], need: "", gapType: null,
         origin: "source", chunkId: chunk.id, coverageFallback: true,
       });
@@ -557,7 +546,6 @@ function reconcileConcepts(graph) {
           need: `Define or explain "${concept.id}" before the dependent knowledge can be understood.`,
           gapType: "definition",
           sourceUnitIds: relatedUnits,
-          sourceQuote: "",
           defines: [],
           requires: [],
           mentions: [],

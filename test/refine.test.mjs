@@ -20,7 +20,6 @@ function sourceNode(unit, overrides = {}) {
     kind: "claim",
     text: unit.text,
     sourceUnitIds: [unit.id],
-    sourceQuote: "",
     defines: [],
     requires: [],
     mentions: [],
@@ -71,8 +70,8 @@ describe("extraction validation", () => {
     const chunk = { id: "c0001", context: [], units };
     const extraction = validateExtraction({
       nodes: [
-        { kind: "definition", text: "A spectral operator is defined.", sourceUnitIds: [units[0].id], sourceQuote: "A spectral operator", defines: ["Spectral Operator"], requires: [], mentions: [], origin: "source" },
-        { kind: "claim", text: "Its spectrum controls the solution.", sourceUnitIds: [units[1].id], sourceQuote: "Its spectrum", defines: [], requires: ["spectral operator"], mentions: ["spectrum"], origin: "source" },
+        { kind: "definition", text: "A spectral operator is defined.", sourceUnitIds: [units[0].id], defines: ["Spectral Operator"], requires: [], mentions: [], origin: "source" },
+        { kind: "claim", text: "Its spectrum controls the solution.", sourceUnitIds: [units[1].id], defines: [], requires: ["spectral operator"], mentions: ["spectrum"], origin: "source" },
       ],
       edges: [{ from: 0, to: 1, relation: "enables", reason: "definition before use" }],
       evidenceFrames: [],
@@ -81,14 +80,16 @@ describe("extraction validation", () => {
     expect(extraction.edges).toEqual([{ from: 0, to: 1, relation: "enables", reason: "definition before use" }]);
   });
 
-  test("rejects ungrounded source quotes", () => {
+  test("does not require a source quotation", () => {
     const units = parseSourceUnits("Grounded text.");
     const chunk = { id: "c0001", context: [], units };
-    expect(() => validateExtraction({
-      nodes: [{ kind: "claim", text: "Claim.", sourceUnitIds: [units[0].id], sourceQuote: "invented quote", defines: [], requires: [], mentions: [], origin: "source" }],
+    const extraction = validateExtraction({
+      nodes: [{ kind: "claim", text: "Extracted information.", sourceUnitIds: [units[0].id], defines: [], requires: [], mentions: [], origin: "source" }],
       edges: [],
       evidenceFrames: [],
-    }, chunk)).toThrow("sourceQuote is not present");
+    }, chunk);
+    expect(extraction.nodes[0]).toMatchObject({ text: "Extracted information.", sourceUnitIds: [units[0].id] });
+    expect(extraction.nodes[0]).not.toHaveProperty("sourceQuote");
   });
 
   test("retains defines edges", () => {
@@ -96,8 +97,8 @@ describe("extraction validation", () => {
     const chunk = { id: "c0001", context: [], units };
     const extraction = validateExtraction({
       nodes: [
-        { kind: "definition", text: "A spectral operator is defined.", sourceUnitIds: [units[0].id], sourceQuote: "spectral operator", defines: ["spectral operator"], requires: [], mentions: [], origin: "source" },
-        { kind: "claim", text: "The operator has a spectrum.", sourceUnitIds: [units[0].id], sourceQuote: "is defined", defines: [], requires: ["spectral operator"], mentions: [], origin: "source" },
+        { kind: "definition", text: "A spectral operator is defined.", sourceUnitIds: [units[0].id], defines: ["spectral operator"], requires: [], mentions: [], origin: "source" },
+        { kind: "claim", text: "The operator has a spectrum.", sourceUnitIds: [units[0].id], defines: [], requires: ["spectral operator"], mentions: [], origin: "source" },
       ],
       edges: [{ from: 0, to: 1, relation: "defines", reason: "definition names the operator" }],
       evidenceFrames: [],
@@ -114,7 +115,6 @@ describe("extraction validation", () => {
         kind: "equation",
         text: "\\[x^{2}\\]",
         sourceUnitIds: [equation.id],
-        sourceQuote: "\\[x^{2}\\]",
         defines: ["square"],
         requires: [],
         mentions: [],
@@ -127,19 +127,17 @@ describe("extraction validation", () => {
       evidenceFrames: [],
     }, chunk);
     expect(extraction.nodes[0].text).toBe(equation.text);
-    expect(extraction.nodes[0].sourceQuote).toBe("");
   });
 
-  test("does not rewrite a claim that only cites an equation unit", () => {
+  test("does not rewrite a claim that cites an equation unit", () => {
     const units = parseSourceUnits("$$\nx^2\n$$");
     const equation = units.find((unit) => unit.kind === "equation");
     const chunk = { id: "c0001", context: [], units };
-    expect(() => validateExtraction({
+    const extraction = validateExtraction({
       nodes: [{
         kind: "claim",
         text: "The square is isolated.",
         sourceUnitIds: [equation.id],
-        sourceQuote: "invented quote",
         defines: [],
         requires: [],
         mentions: [],
@@ -147,7 +145,8 @@ describe("extraction validation", () => {
       }],
       edges: [],
       evidenceFrames: [],
-    }, chunk)).toThrow("sourceQuote is not present");
+    }, chunk);
+    expect(extraction.nodes[0].text).toBe("The square is isolated.");
   });
 
   test("accepts empty typed gaps and evidence frames", () => {
@@ -155,9 +154,9 @@ describe("extraction validation", () => {
     const chunk = { id: "c0001", context: [], units };
     const extraction = validateExtraction({
       nodes: [
-        { kind: "evidence", text: "A measurement was observed.", sourceUnitIds: [units[0].id], sourceQuote: "measurement", defines: [], requires: [], mentions: [], fills: [], need: "", gapType: null, origin: "source" },
-        { kind: "gap", text: null, sourceUnitIds: [units[0].id], sourceQuote: "", defines: [], requires: [], mentions: [], fills: [], need: "Explain why the measurement supports the claim.", gapType: "Evidence warrant", origin: "gap" },
-        { kind: "claim", text: "The claim follows from the measurement.", sourceUnitIds: [units[0].id], sourceQuote: "supports the claim", defines: [], requires: [], mentions: [], fills: [], need: "", gapType: null, origin: "source" },
+        { kind: "evidence", text: "A measurement was observed.", sourceUnitIds: [units[0].id], defines: [], requires: [], mentions: [], fills: [], need: "", gapType: null, origin: "source" },
+        { kind: "gap", text: null, sourceUnitIds: [units[0].id], defines: [], requires: [], mentions: [], fills: [], need: "Explain why the measurement supports the claim.", gapType: "Evidence warrant", origin: "gap" },
+        { kind: "claim", text: "The claim follows from the measurement.", sourceUnitIds: [units[0].id], defines: [], requires: [], mentions: [], fills: [], need: "", gapType: null, origin: "source" },
       ],
       edges: [{ from: 0, to: 2, relation: "supports", reason: "reported support" }],
       evidenceFrames: [{ claim: 2, evidence: [0], warrantGap: 1, limitations: [] }],
@@ -238,7 +237,7 @@ describe("global knowledge graph", () => {
     const source = "A spectral operator is defined.\n\nIts spectrum controls the solution.";
     const units = parseSourceUnits(source);
     const chunks = [{ id: "c0001", context: [], units }];
-    const failed = salvageFailedChunk(chunks[0], new Error("sourceQuote is not present"));
+    const failed = salvageFailedChunk(chunks[0], new Error("invalid source-unit mapping"));
     expect(failed.nodes[0]).toMatchObject({ kind: "gap", text: null, gapType: "parsing_error", annotations: ["parsing_error"] });
     const graph = assembleGraph(source, "/tmp/source.md", units, chunks, [failed]);
     reconcileConcepts(graph);
@@ -248,15 +247,16 @@ describe("global knowledge graph", () => {
     expect(graph.nodes.filter((node) => node.coverageFallback)).toHaveLength(units.length);
   });
 
-  test("salvageExtraction keeps a claim and annotates a quote mismatch", () => {
+  test("salvageExtraction keeps a claim without a source quotation", () => {
     const units = parseSourceUnits("Grounded text.");
     const chunk = { id: "c0001", context: [], units };
     const extraction = salvageExtraction({
-      nodes: [{ kind: "claim", text: "Claim.", sourceUnitIds: [units[0].id], sourceQuote: "invented quote", defines: [], requires: [], mentions: [], origin: "source" }],
+      nodes: [{ kind: "claim", text: "Claim.", sourceUnitIds: [units[0].id], defines: [], requires: [], mentions: [], origin: "source" }],
       edges: [{ from: 0, to: 0, relation: "enables" }, { from: 0, to: 1, relation: "supports" }],
       evidenceFrames: [{ claim: 0, evidence: [9], warrantGap: null, limitations: [] }],
     }, chunk);
-    expect(extraction.nodes[0]).toMatchObject({ text: "Claim.", sourceQuote: "", annotations: ["quote_mismatch"] });
+    expect(extraction.nodes[0]).toMatchObject({ text: "Claim.", annotations: [] });
+    expect(extraction.nodes[0]).not.toHaveProperty("sourceQuote");
     expect(extraction.edges).toEqual([]);
     expect(extraction.evidenceFrames).toEqual([]);
     expect(extraction.issues).toEqual([

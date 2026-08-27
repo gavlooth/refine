@@ -5,11 +5,21 @@
   "type": "module",
   "description": "Decompose dense technical Markdown into a provenance-grounded knowledge graph with explicit gaps.",
   "bin": {
-    "cognitive-refine": "./bin/refine.mjs"
+    "cognitive-refine": "./bin/refine.mjs",
+    "cognitive-decompress": "./bin/decompress.mjs",
+    "cognitive-expand": "./bin/expand.mjs",
+    "cognitive-resolve-gaps": "./bin/resolve-gaps.mjs",
+    "cognitive-generate-document": "./bin/generate-document.mjs",
+    "cognitive-html-to-markdown": "./bin/html-to-markdown.mjs"
   },
   "scripts": {
+    "html-to-markdown": "bun ./bin/html-to-markdown.mjs",
     "refine": "bun ./bin/refine.mjs",
+    "decompose": "bun ./bin/decompress.mjs",
+    "expand": "bun ./bin/expand.mjs",
+    "resolve-gaps": "bun ./bin/resolve-gaps.mjs",
+    "generate-document": "bun ./bin/generate-document.mjs",
     "test": "bun test ./test",
-    "check": "bun test ./test && bun build ./bin/refine.mjs --target=bun --outfile=/tmp/cognitive-refine-check.mjs"
+    "check": "bun test ./test && bun build ./bin/html-to-markdown.mjs --target=bun --outfile=/tmp/cognitive-html-to-markdown-check.mjs && bun build ./bin/refine.mjs --target=bun --outfile=/tmp/cognitive-refine-check.mjs && bun build ./bin/decompress.mjs --target=bun --outfile=/tmp/cognitive-decompress-check.mjs && bun build ./bin/expand.mjs --target=bun --outfile=/tmp/cognitive-expand-check.mjs && bun build ./bin/resolve-gaps.mjs --target=bun --outfile=/tmp/cognitive-resolve-gaps-check.mjs && bun build ./bin/generate-document.mjs --target=bun --outfile=/tmp/cognitive-generate-document-check.mjs"
   }
 }
