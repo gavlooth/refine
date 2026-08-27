@@ -10,7 +10,7 @@ import { dirname, resolve } from "node:path";
 const GRAPH_SCHEMA_VERSION = "knowledge-graph/v3-cognitive-decompression";
 const PROTECTED_UNIT_KINDS = new Set(["code", "equation"]);
 const NODE_KINDS = new Set(["claim", "definition", "procedure", "requirement", "evidence", "example", "equation", "code", "topic", "source", "gap"]);
-const EDGE_RELATIONS = new Set(["enables", "supports", "elaborates", "exemplifies", "contrasts", "part_of", "precedes"]);
+const EDGE_RELATIONS = new Set(["enables", "supports", "elaborates", "exemplifies", "contrasts", "part_of", "precedes", "defines"]);
 
 function integerEnv(name, fallback, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) {
   const raw = Bun.env[name];
@@ -27,6 +27,8 @@ const config = {
   retries: integerEnv("REFINE_RETRIES", 2, { min: 0, max: 8 }),
   timeoutSeconds: integerEnv("REFINE_TIMEOUT_SECONDS", 600, { min: 30, max: 7_200 }),
   model: Bun.env.REFINE_MODEL ?? "",
+  thinking: Bun.env.REFINE_THINKING ?? "",
+  serviceTier: Bun.env.REFINE_SERVICE_TIER ?? "",
 };
 
 const EXTRACTION_SCHEMA = {
@@ -92,13 +94,14 @@ Rules:
 - Rewrite each source idea as the simplest accurate standalone statement. Do not preserve dense source phrasing.
 - Emit one small node per independent claim, definition, procedure step, piece of evidence, example, equation, or code block.
 - Split enumerations, contrasts, and workflows into sparse local nodes. Never compress a workflow or taxonomy into one heavy node.
-- Ground every source-derived node in sourceUnitIds and include a short exact sourceQuote whenever the unit is prose.
+- Ground every source-derived node in sourceUnitIds. For prose, sourceQuote must be a short exact contiguous substring copied byte for byte; never paraphrase it or insert ellipses. Use an empty string if no short exact quote is useful.
 - Every source unit must be represented by at least one node.
-- Copy code and equation units verbatim into dedicated nodes.
+- For code and equation units, emit a dedicated node with those sourceUnitIds and leave sourceQuote empty. Do not copy or reformat the unit text; the assembler inserts the source bytes.
 - Never invent measurements, results, citations, or paper-specific claims.
 - defines and requires contain canonical concept names, not Markdown spellings. Expand an acronym to its standard name when the expansion is known from the source.
 - requires lists concepts that must be understood before the node; mentions lists non-prerequisite concepts.
 - When the source skips a definition, cause, logical bridge, motivation, workflow step, interpretation, or context, insert a gap node.
+- If you cannot parse or ground a unit, emit a gap with gapType=parsing_error and a concise need. Do not invent the missing content.
 - A gap node has kind=gap, text=null, origin=gap, a concise need, a gapType, and fills listing any concepts it stands in for. It contains no invented explanation.
 - Connect knowledge through gap nodes so the missing step is visible instead of silently filled.
 - Represent evidence as small evidence nodes. Add an evidenceFrame tying a claim to its evidence, optional empty warrant gap, and limitations.
@@ -254,17 +257,22 @@ function validateExtraction(value, chunk) {
     if (!node || typeof node !== "object") throw new Error(`node ${index} must be an object`);
     const kind = NODE_KINDS.has(node.kind) ? node.kind : "claim";
     const gap = kind === "gap";
-    const text = typeof node.text === "string" && node.text.trim() ? node.text.trim() : null;
+    let text = typeof node.text === "string" && node.text.trim() ? node.text.trim() : null;
     const need = typeof node.need === "string" ? node.need.trim() : "";
     const gapType = normalizeGapType(node.gapType);
     if (gap && text !== null) throw new Error(`gap node ${index} must have text=null`);
     if (gap && (!need || !gapType)) throw new Error(`gap node ${index} requires need and a valid gapType`);
-    if (!gap && text === null) throw new Error(`knowledge node ${index} has no text`);
     const origin = gap ? "gap" : "source";
     const sourceUnitIds = uniqueStrings(Array.isArray(node.sourceUnitIds) ? node.sourceUnitIds : []);
     if (!gap && !sourceUnitIds.length) throw new Error(`source node ${index} has no sourceUnitIds`);
     for (const unitId of sourceUnitIds) if (!unitById.has(unitId)) throw new Error(`node ${index} references unknown source unit ${unitId}`);
-    const sourceQuote = typeof node.sourceQuote === "string" ? node.sourceQuote.trim() : "";
+    const protectedUnits = sourceUnitIds.map((unitId) => unitById.get(unitId)).filter((unit) => PROTECTED_UNIT_KINDS.has(unit.kind));
+    let sourceQuote = typeof node.sourceQuote === "string" ? node.sourceQuote.trim() : "";
+    if (!gap && sourceUnitIds.length === 1 && protectedUnits.length === 1 && kind === protectedUnits[0].kind && PROTECTED_UNIT_KINDS.has(kind)) {
+      text = protectedUnits[0].text;
+      sourceQuote = "";
+    }
+    if (!gap && text === null) throw new Error(`knowledge node ${index} has no text`);
     if (sourceQuote && !sourceUnitIds.some((unitId) => unitById.get(unitId).text.includes(sourceQuote))) throw new Error(`node ${index} sourceQuote is not present in its source units`);
     return {
       kind, text, need, gapType, sourceUnitIds, sourceQuote,
@@ -309,6 +317,8 @@ async function callOmpOnce(system, task, artifactDirectory, stem, attempt) {
   const promptPath = resolve(artifactDirectory, `${stem}.prompt.txt`); await Bun.write(promptPath, task);
   const args = ["omp", "-p", "--mode", "text", "--no-session", "--no-tools", "--no-extensions", "--no-skills", "--no-rules", "--max-time", `${config.timeoutSeconds}s`, "--system-prompt", system];
   if (config.model) args.push("--model", config.model);
+  if (config.thinking) args.push("--thinking", config.thinking);
+  if (config.serviceTier) args.push("--service-tier", config.serviceTier);
   args.push(`@${promptPath}`);
   const child = Bun.spawn(args, { stdout: "pipe", stderr: "pipe" });
   let timedOut = false;
@@ -330,7 +340,7 @@ async function callOmpJson(system, task, artifactDirectory, stem, validate) {
     try {
       const response = await callOmpOnce(system, task, artifactDirectory, stem, attempt);
       const parsed = parseJsonValue(response); const validated = validate(parsed);
-      await Bun.write(resolve(artifactDirectory, `${stem}.json`), `${JSON.stringify(parsed, null, 2)}\n`);
+      await Bun.write(resolve(artifactDirectory, `${stem}.json`), `${JSON.stringify(validated, null, 2)}\n`);
       return validated;
     } catch (error) {
       lastError = error;
@@ -361,6 +371,108 @@ function addEdge(graph, edge) {
 }
 
 function nextNodeId(graph) { const id = `n${String(graph._nextNode).padStart(7, "0")}`; graph._nextNode += 1; return id; }
+function salvageFailedChunk(chunk, error) {
+  const message = error?.message ?? String(error);
+  return {
+    nodes: [{
+      kind: "gap",
+      text: null,
+      sourceUnitIds: chunk.units.map((unit) => unit.id),
+      sourceQuote: "",
+      defines: [],
+      requires: [],
+      mentions: [],
+      fills: [],
+      need: message,
+      gapType: "parsing_error",
+      origin: "gap",
+      chunkId: chunk.id,
+      annotations: ["parsing_error"],
+    }],
+    edges: [],
+    evidenceFrames: [],
+    issues: [{ chunkId: chunk.id, category: "parsing_error", reason: message }],
+  };
+}
+
+function salvageExtraction(value, chunk) {
+  if (!value || typeof value !== "object" || !Array.isArray(value.nodes)) {
+    return salvageFailedChunk(chunk, new Error("extraction JSON lacked a nodes array"));
+  }
+  const unitById = new Map(chunk.units.map((unit) => [unit.id, unit]));
+  const nodes = [];
+  const indexMap = new Map();
+  for (const [index, node] of value.nodes.entries()) {
+    if (!node || typeof node !== "object") continue;
+    const annotations = [];
+    let kind = NODE_KINDS.has(node.kind) ? node.kind : "claim";
+    if (!NODE_KINDS.has(node.kind)) annotations.push("kind_normalized");
+    const gap = kind === "gap";
+    let text = typeof node.text === "string" && node.text.trim() ? node.text.trim() : null;
+    let need = typeof node.need === "string" ? node.need.trim() : "";
+    let gapType = normalizeGapType(node.gapType);
+    const sourceUnitIds = uniqueStrings(Array.isArray(node.sourceUnitIds) ? node.sourceUnitIds : []).filter((unitId) => {
+      if (unitById.has(unitId)) return true;
+      annotations.push("parsing_error");
+      return false;
+    });
+    const protectedUnits = sourceUnitIds.map((unitId) => unitById.get(unitId)).filter((unit) => PROTECTED_UNIT_KINDS.has(unit.kind));
+    let sourceQuote = typeof node.sourceQuote === "string" ? node.sourceQuote.trim() : "";
+    if (!gap && sourceUnitIds.length === 1 && protectedUnits.length === 1 && kind === protectedUnits[0].kind && PROTECTED_UNIT_KINDS.has(kind)) {
+      text = protectedUnits[0].text;
+      sourceQuote = "";
+    }
+    if (sourceQuote && !sourceUnitIds.some((unitId) => unitById.get(unitId).text.includes(sourceQuote))) {
+      sourceQuote = "";
+      annotations.push("quote_mismatch");
+    }
+    if (gap && (text !== null || !need || !gapType)) {
+      text = null;
+      need = need || "Gap was emitted without a typed need.";
+      gapType = gapType || "parsing_error";
+      annotations.push("parsing_error");
+    }
+    if (!gap && text === null) {
+      kind = "gap";
+      need = "Model node had no text.";
+      gapType = "parsing_error";
+      annotations.push("parsing_error");
+    }
+    if (!gap && kind !== "gap" && !sourceUnitIds.length) annotations.push("ungrounded");
+    const origin = kind === "gap" ? "gap" : "source";
+    indexMap.set(index, nodes.length);
+    nodes.push({
+      kind, text: kind === "gap" ? null : text, need, gapType, sourceUnitIds, sourceQuote,
+      defines: normalizeConcepts(Array.isArray(node.defines) ? node.defines : []),
+      requires: normalizeConcepts(Array.isArray(node.requires) ? node.requires : []),
+      mentions: normalizeConcepts(Array.isArray(node.mentions) ? node.mentions : []),
+      fills: normalizeConcepts(Array.isArray(node.fills) ? node.fills : []),
+      origin, chunkId: chunk.id, annotations: [...new Set(annotations)],
+    });
+  }
+  const edges = [];
+  const issues = [];
+  for (const [index, edge] of (Array.isArray(value.edges) ? value.edges : []).entries()) {
+    if (!edge || !Number.isSafeInteger(edge.from) || !Number.isSafeInteger(edge.to) || !indexMap.has(edge.from) || !indexMap.has(edge.to) || edge.from === edge.to || !EDGE_RELATIONS.has(edge.relation)) {
+      issues.push({ chunkId: chunk.id, category: "invalid_edge", index, from: edge?.from ?? null, to: edge?.to ?? null, relation: edge?.relation ?? null });
+      continue;
+    }
+    edges.push({ from: indexMap.get(edge.from), to: indexMap.get(edge.to), relation: edge.relation, reason: typeof edge.reason === "string" ? edge.reason.trim() : "" });
+  }
+  const evidenceFrames = [];
+  for (const [index, frame] of (Array.isArray(value.evidenceFrames) ? value.evidenceFrames : []).entries()) {
+    const evidence = Array.isArray(frame?.evidence) ? frame.evidence.filter((nodeIndex) => indexMap.has(nodeIndex)).map((nodeIndex) => indexMap.get(nodeIndex)) : [];
+    if (!frame || !Number.isSafeInteger(frame.claim) || !indexMap.has(frame.claim) || !evidence.length) {
+      issues.push({ chunkId: chunk.id, category: "invalid_evidence_frame", index, claim: frame?.claim ?? null });
+      continue;
+    }
+    const warrantGap = Number.isSafeInteger(frame.warrantGap) && nodes[indexMap.get(frame.warrantGap)]?.kind === "gap" ? indexMap.get(frame.warrantGap) : null;
+    const limitations = Array.isArray(frame.limitations) ? frame.limitations.filter((nodeIndex) => indexMap.has(nodeIndex)).map((nodeIndex) => indexMap.get(nodeIndex)) : [];
+    evidenceFrames.push({ claim: indexMap.get(frame.claim), evidence: [...new Set(evidence)], warrantGap, limitations: [...new Set(limitations)] });
+  }
+  if (!nodes.length) return salvageFailedChunk(chunk, new Error("no salvageable nodes"));
+  return { nodes, edges, evidenceFrames, issues };
+}
 
 function addCoverageFallbacks(extraction, chunk) {
   const covered = new Set(extraction.nodes.filter((node) => node.kind !== "gap").flatMap((node) => node.sourceUnitIds));
@@ -382,12 +494,13 @@ function addCoverageFallbacks(extraction, chunk) {
 function assembleGraph(source, sourcePath, units, chunks, extractions) {
   const graph = {
     schemaVersion: GRAPH_SCHEMA_VERSION,
-    metadata: { sourcePath, sourceSha256: sha256(source), generatedAt: new Date().toISOString(), model: config.model || null, sourceUnits: units.length, chunks: chunks.length, coverageFallbackNodes: 0, protectedFallbackNodes: 0 },
+    metadata: { sourcePath, sourceSha256: sha256(source), generatedAt: new Date().toISOString(), model: config.model || null, sourceUnits: units.length, chunks: chunks.length, coverageFallbackNodes: 0, protectedFallbackNodes: 0, salvageIssues: [] },
     sourceUnits: units, nodes: [], edges: [], evidenceFrames: [], concepts: [], unresolvedConcepts: [], validation: null, _nextNode: 1, _edgeKeys: new Set(),
   };
   for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
     const extraction = extractions[chunkIndex]; const coverage = addCoverageFallbacks(extraction, chunks[chunkIndex]);
     graph.metadata.coverageFallbackNodes += coverage.fallbackCount; graph.metadata.protectedFallbackNodes += coverage.protectedFallbackCount;
+    if (Array.isArray(extraction.issues)) graph.metadata.salvageIssues.push(...extraction.issues);
     const globalIds = extraction.nodes.map((node) => { const id = nextNodeId(graph); graph.nodes.push({ id, ...node }); return id; });
     for (const edge of extraction.edges) addEdge(graph, { from: globalIds[edge.from], to: globalIds[edge.to], relation: edge.relation, reason: edge.reason, origin: "model" });
     for (const frame of extraction.evidenceFrames ?? []) {
@@ -556,8 +669,21 @@ async function main() {
     log(`extracting ${units.length} source units in ${chunks.length} chunks at concurrency ${config.concurrency}`);
     const extractions = await mapConcurrent(chunks, config.concurrency, async (chunk, index) => {
       const stem = `extract-${String(index + 1).padStart(4, "0")}`;
-      const extraction = await callOmpJson(GRAPH_SYSTEM_PROMPT, extractionTask(chunk), extractionDirectory, stem, (value) => validateExtraction(value, chunk));
-      log(`  ${stem}: ${extraction.nodes.length} nodes, ${extraction.edges.length} semantic edges`); return extraction;
+      try {
+        const extraction = await callOmpJson(GRAPH_SYSTEM_PROMPT, extractionTask(chunk), extractionDirectory, stem, (value) => validateExtraction(value, chunk));
+        log(`  ${stem}: ${extraction.nodes.length} nodes, ${extraction.edges.length} semantic edges`);
+        return extraction;
+      } catch (error) {
+        log(`  ${stem} failed: ${error.message}; salvaging remaining node data`);
+        for (let attempt = config.retries + 1; attempt >= 1; attempt--) {
+          const stdoutPath = resolve(extractionDirectory, `${stem}.attempt-${attempt}.stdout.log`);
+          if (!(await Bun.file(stdoutPath).exists())) continue;
+          try {
+            return salvageExtraction(parseJsonValue(await Bun.file(stdoutPath).text()), chunk);
+          } catch {}
+        }
+        return salvageFailedChunk(chunk, error);
+      }
     });
     const graph = assembleGraph(source, inputPath, units, chunks, extractions); const modelEdges = graph.edges.length; reconcileConcepts(graph);
     const gapCount = graph.nodes.filter((node) => node.kind === "gap").length;
@@ -573,5 +699,5 @@ if (import.meta.main) await main();
 export {
   GRAPH_SCHEMA_VERSION, parseSourceUnits, buildChunks, parseJsonValue, validateExtraction, normalizeConcept,
   addCoverageFallbacks, assembleGraph, conceptIndex, reconcileConcepts, validateGraph,
-  serializableGraph, mapConcurrent,
+  serializableGraph, mapConcurrent, salvageFailedChunk, salvageExtraction, writeJsonAtomic,
 };

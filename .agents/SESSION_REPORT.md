@@ -1,3 +1,163 @@
+## 2026-08-27 12:37:22 CEST
+
+Objective completed:
+Produce the Chapter 10 graph from already-captured Mercury 2 output without wasting valid node data when one chunk contains recoverable extraction errors.
+
+Relevant workspace or target:
+`experiments/chapter-10/graph.json`; captured Mercury 2 output under `experiments/chapter-10/run-mercury-2`.
+
+Code or configuration changes made:
+- Kept strict whole-chunk extraction validation for clean model output.
+- Added a separate salvage adapter: it preserves parseable nodes, replaces dedicated protected units with source bytes, tags node-level defects, remaps only valid topology, and records omitted malformed records in `metadata.salvageIssues`.
+- Failed chunks with no salvageable nodes become source-grounded `parsing_error` gaps; coverage fallbacks preserve every source unit.
+- Restored atomic graph writes and passed `REFINE_SERVICE_TIER` through to OMP.
+
+Commands run:
+- `bun test`: 18 passed, 0 failed, 44 expectations.
+- Local Mercury replay, graph validation, atomic write, and JSON inspection.
+
+Key results:
+- `graph.json`: `complete_with_gaps`; 177 nodes, 123 knowledge nodes, 54 gaps, 138 edges, 6 evidence frames.
+- 14 nodes carry `quote_mismatch` or `kind_normalized` annotations.
+- One omitted invalid evidence frame is retained in `metadata.salvageIssues` with chunk and original index.
+- 15 source-coverage fallback nodes. No graph validation errors.
+- No remote model call in this checkpoint.
+
+Current best recommendation:
+Use `experiments/chapter-10/graph.json` as the working graph for later refinement. Treat annotations and salvage issues as first-class unresolved information, not silently repaired facts.
+
+Signature: Codex GPT-5
+
+## 2026-08-27 11:43:34 CEST
+
+Objective attempted:
+Produce a usable Chapter 10 graph from captured Mercury 2 responses without further remote calls, then restore fail-closed extraction.
+
+Relevant workspace or target:
+`experiments/chapter-10/graph.draft.json`; `bin/refine.mjs` quote validation.
+
+Code or configuration changes made:
+- Assembler still owns dedicated equation/code unit bytes.
+- `defines` is a valid edge relation.
+- Invalid prose `sourceQuote` again fails closed in production `validateExtraction`.
+- A one-off local salvage assembled Mercury 2 chunk stdout into a non-product draft.
+
+Commands run:
+- `bun test`: 16 passed, 0 failed.
+- `jq` shape check of `graph.draft.json`.
+
+Key results, metrics, or observed failure modes:
+- Draft graph: 177 nodes, 54 gaps. Status `diagnostic_salvage`. Authority `diagnostic_salvage`.
+- Unmatched quotes were dropped and an invalid evidence frame skipped in salvage only.
+- Product path `experiments/chapter-10/graph.json` is absent.
+- No remote model call in this checkpoint.
+
+Current best recommendation or checkpoint:
+Treat `graph.draft.json` as disposable salvage. Do not report it as a validator-passing product graph. Production extraction remains fail-closed.
+
+Next actions:
+- None scheduled.
+
+Signature: Codex GPT-5
+
+## 2026-08-27 10:52:05 CEST
+
+Objective attempted:
+Stop spending remote time on quote/equation copying and make protected source bytes assembler-owned.
+
+Relevant workspace or target:
+`/home/christos/code/refine`; captured Luna stdout under `experiments/chapter-10/run/extraction`.
+
+Code or configuration changes made:
+- Dedicated `equation`/`code` nodes bound to one matching protected source unit now take that unit's bytes and drop `sourceQuote`.
+- A `claim` citing an equation still fail-closes on a non-exact quote.
+- Extraction artifacts persist `validated`, not the raw parsed response.
+- Corrective retries that embedded the previous invalid response were removed.
+
+Commands run:
+- `bun test`: 15 passed, 0 failed, 35 expectations.
+- Local replay of captured Luna chunk 1 through `validateExtraction`.
+
+Key results, metrics, or observed failure modes:
+- Equation re-typesetting is no longer a terminal extraction failure for dedicated equation/code nodes.
+- The captured Luna chunk-1 response still fails closed on edge relation `defines`. It is not an accepted graph.
+- No remote model call was made after the stop.
+
+Invalidated assumptions or failed approaches worth preserving:
+- Asking the model to copy protected source bytes is the wrong contract.
+- Embedding prior invalid responses into retries inflated prompts and did not close the gate.
+
+Current best recommendation or checkpoint:
+Keep the representative graph incomplete. Use assembler-owned protected bytes on any future extraction. Do not relaunch Luna, GPT-5.4-mini, or Sol from this experiment.
+
+Unresolved issues:
+- No validated Chapter 10 graph exists.
+
+Next actions:
+- None scheduled.
+
+Dependencies, blockers, or restart requirements:
+- No process is running.
+
+Negative-memory status:
+Do not retry the failed remote configurations. Do not ask the model to copy code or equations.
+
+Signature: Codex GPT-5
+
+## 2026-08-27 10:02:16 CEST
+
+Objective attempted:
+Produce the representative multi-chunk cognitive-decompression graph with a smaller model, as requested, while preserving strict provenance and fail-closed validation.
+
+Relevant workspace or target:
+Repository `/home/christos/code/refine`; immutable Chapter 10 snapshot `experiments/chapter-10/input.md`; diagnostic run directories `experiments/chapter-10/run`, `run-luna-6000`, `run-luna-corrective`, and `run-mini`.
+
+Code or configuration changes made:
+- Created a 26,564-byte Chapter 10 input snapshot containing 104 source units and the required workflows, jargon, causal claims, equations, evidence, limitations, and citations.
+- Strengthened the extraction prompt so prose quotes must be exact contiguous substrings and code/equation units must be copied byte for byte.
+- Changed retries from blind independent calls to corrective calls that include the prior invalid response and exact validation error; corrected responses still must pass the unchanged validator.
+- Kept strict `sourceQuote`, edge-index, protected-content, coverage, and atomic-write gates. No invalid response produced `graph.json`.
+
+Commands run:
+- `bun test` after each implementation change: 13 passed, 0 failed, 32 expectations.
+- GPT-5.6 Luna over two default-sized chunks: repeated non-exact equation/prose quotes and one JSON escape failure.
+- GPT-5.6 Luna over eight 6,000-character chunks without retries: two chunks validated; one emitted an out-of-range edge and one emitted a non-exact protected quote.
+- GPT-5.6 Luna over the same eight chunks with corrective retries: five chunks validated, but chunk 1 still re-typeset the protected equation after receiving the exact validation error.
+- GPT-5.4-mini over the same eight chunks with corrective retries: chunk 4 exceeded the 600-second OMP deadline on both attempts.
+
+Key results, metrics, or observed failure modes:
+- Luna repeatedly changed the exact Chapter 10 dipole Hamiltonian by inserting LaTeX spacing commands and line breaks. This violates protected-source fidelity.
+- Corrective retries improved partial chunk completion but did not make Luna satisfy the immutable equation contract.
+- GPT-5.4-mini did not complete the representative extraction within the existing bounded timeout contract.
+- Fail-closed behavior held: no output graph exists, no invalid model response was accepted, and no background extraction process remains.
+- These results do not establish a general capability ranking between GPT-5.6 Luna and GPT-5.4-mini; they only invalidate the tested configurations for this extraction contract.
+
+Invalidated assumptions or failed approaches worth preserving:
+- A smaller model is not automatically cheaper for this workload when invalid responses and 600-second retries dominate.
+- Repeating Luna with smaller chunks, stronger copying instructions, or corrective feedback does not solve its protected-equation fidelity on this input.
+- GPT-5.4-mini is not an established fallback for this gate because it timed out twice on the same chunk.
+- Do not weaken source quotation, equation fidelity, edge integrity, or fail-closed validation to make either run appear successful.
+
+Current best recommendation or checkpoint:
+The representative extraction and gap audit are abandoned incomplete. No graph was accepted. Do not relaunch the Luna, GPT-5.4-mini, or Sol configurations from this experiment.
+
+Unresolved issues:
+- The representative multi-chunk graph and gap audit remain incomplete.
+- The corrective-retry implementation did not close a full representative run.
+
+Next actions:
+- None scheduled for this abandoned experiment.
+- Do not launch a full-book run or graph-to-teaching synthesis from these diagnostic results.
+
+Dependencies, blockers, or restart requirements:
+- No process is running.
+- No restart or migration is required.
+
+Negative-memory status:
+Recorded locally in this authoritative report and `.agents/PLAN.md`: Luna exact-copy failures, GPT-5.4-mini deadline failures, and the stopped Sol runs must not be retried under the same configurations.
+
+Signature: Codex GPT-5
+
 ## 2026-08-27 08:34:51 CEST
 
 Objective attempted:

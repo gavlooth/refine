@@ -3,3 +3,7 @@ dist/
 *.run-*/
 *.tmp-*
 .DS_Store
+
+# Local extraction experiments and source documents
+experiments/
+*.pdf
