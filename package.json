@@ -1,0 +1,15 @@
+{
+  "name": "cognitive-refine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Decompose dense technical Markdown into a provenance-grounded knowledge graph with explicit gaps.",
+  "bin": {
+    "cognitive-refine": "./bin/refine.mjs"
+  },
+  "scripts": {
+    "refine": "bun ./bin/refine.mjs",
+    "test": "bun test ./test",
+    "check": "bun test ./test && bun build ./bin/refine.mjs --target=bun --outfile=/tmp/cognitive-refine-check.mjs"
+  }
+}
