@@ -11,6 +11,10 @@
     "cognitive-decompress": "./bin/decompress.mjs",
     "cognitive-expand": "./bin/expand.mjs",
     "cognitive-resolve-gaps": "./bin/resolve-gaps.mjs",
+    "cognitive-build-teaching-records": "./bin/build-teaching-records.mjs",
+    "cognitive-expand-teaching-records": "./bin/expand-teaching-records.mjs",
+    "cognitive-prune-teaching-records": "./bin/prune-teaching-records.mjs",
+    "cognitive-assemble-teaching-document": "./bin/assemble-teaching-document.mjs",
     "cognitive-generate-document": "./bin/generate-document.mjs",
     "cognitive-html-to-markdown": "./bin/html-to-markdown.mjs"
   },
@@ -22,8 +26,12 @@
     "decompose": "bun ./bin/decompress.mjs",
     "expand": "bun ./bin/expand.mjs",
     "resolve-gaps": "bun ./bin/resolve-gaps.mjs",
+    "build-teaching-records": "bun ./bin/build-teaching-records.mjs",
+    "expand-teaching-records": "bun ./bin/expand-teaching-records.mjs",
+    "prune-teaching-records": "bun ./bin/prune-teaching-records.mjs",
+    "assemble-teaching-document": "bun ./bin/assemble-teaching-document.mjs",
     "generate-document": "bun ./bin/generate-document.mjs",
     "test": "bun test ./test",
-    "check": "bun test ./test && bun build ./bin/html-to-markdown.mjs --target=bun --outfile=/tmp/cognitive-html-to-markdown-check.mjs && bun build ./bin/refine.mjs --target=bun --outfile=/tmp/cognitive-refine-check.mjs && bun build ./bin/repair-sharded-graph.mjs --target=bun --outfile=/tmp/cognitive-repair-shards-check.mjs && bun build ./bin/annotate-markdown.mjs --target=bun --outfile=/tmp/cognitive-annotate-markdown-check.mjs && bun build ./bin/decompress.mjs --target=bun --outfile=/tmp/cognitive-decompress-check.mjs && bun build ./bin/expand.mjs --target=bun --outfile=/tmp/cognitive-expand-check.mjs && bun build ./bin/resolve-gaps.mjs --target=bun --outfile=/tmp/cognitive-resolve-gaps-check.mjs && bun build ./bin/generate-document.mjs --target=bun --outfile=/tmp/cognitive-generate-document-check.mjs"
+    "check": "bun test ./test && bun build ./bin/html-to-markdown.mjs --target=bun --outfile=/tmp/cognitive-html-to-markdown-check.mjs && bun build ./bin/refine.mjs --target=bun --outfile=/tmp/cognitive-refine-check.mjs && bun build ./bin/repair-sharded-graph.mjs --target=bun --outfile=/tmp/cognitive-repair-shards-check.mjs && bun build ./bin/annotate-markdown.mjs --target=bun --outfile=/tmp/cognitive-annotate-markdown-check.mjs && bun build ./bin/decompress.mjs --target=bun --outfile=/tmp/cognitive-decompress-check.mjs && bun build ./bin/expand.mjs --target=bun --outfile=/tmp/cognitive-expand-check.mjs && bun build ./bin/resolve-gaps.mjs --target=bun --outfile=/tmp/cognitive-resolve-gaps-check.mjs && bun build ./bin/build-teaching-records.mjs --target=bun --outfile=/tmp/cognitive-build-teaching-records-check.mjs && bun build ./bin/expand-teaching-records.mjs --target=bun --outfile=/tmp/cognitive-expand-teaching-records-check.mjs && bun build ./bin/prune-teaching-records.mjs --target=bun --outfile=/tmp/cognitive-prune-teaching-records-check.mjs && bun build ./bin/assemble-teaching-document.mjs --target=bun --outfile=/tmp/cognitive-assemble-teaching-document-check.mjs && bun build ./bin/generate-document.mjs --target=bun --outfile=/tmp/cognitive-generate-document-check.mjs"
   }
 }

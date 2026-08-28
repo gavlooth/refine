@@ -1,3 +1,134 @@
+## 2026-08-28 21:49:48 CEST
+
+Objective completed:
+Replace free-form document rewriting with traceable, iterative outward knowledge expansion and regenerate Delta/Qbits teaching documents under measurable cognitive-decompression gates.
+
+Implementation:
+- `bin/build-teaching-records.mjs`: one immutable record per retained source-grounded graph idea; source anchors, density, chapter, dependencies, gaps, and optional definition-overlay records.
+- `bin/expand-teaching-records.mjs`: Luna-driven iterative expansion through depths 0–2. Dense source records split into focused source units; new explanations emit prerequisite concepts; those concepts become generated records at the next depth.
+- Common textbook knowledge is labeled `model_common_knowledge`. Source-specific, measured, attributed, numerical, or disputed units are `citation_needed`.
+- `bin/prune-teaching-records.mjs`: removes site navigation, graph-variant duplicates, and redundant exact-source fallbacks while retaining every prerequisite reachable from source knowledge.
+- `bin/assemble-teaching-document.mjs`: dependency-order deterministic assembly. The model cannot choose which records are omitted.
+
+Delta result:
+- Artifact: `articles/delta-nets/document.teaching.md`.
+- Report: `articles/delta-nets/document.teaching.report.json`.
+- 376/376 retained source records mapped.
+- 155/155 dense source records expanded.
+- 121 outward prerequisite records; 687 teaching units; 73 sections.
+- 8,558 source words → 10,719 visible teaching words (1.25×).
+- 0 dense paragraphs, 0 missing citation labels, 0 pending records, 0 unresolved prerequisite records.
+- 414 duplicate/navigation/redundant records pruned.
+- Report status: accepted.
+
+Qbits result:
+- Artifact: `articles/qbits/document.teaching.md`.
+- Report: `articles/qbits/document.teaching.report.json`.
+- 7,834/7,834 retained source records mapped.
+- 647/647 dense source records expanded.
+- 2,894 reachable outward prerequisite records; 12,398 teaching units; 98 sections.
+- 202,871 source words → 283,568 visible teaching words (1.40×).
+- 0 dense paragraphs, 0 missing citation labels, 0 pending expansion records.
+- 19 low-level unmatched prerequisite concepts remain explicit `refine:issue` comments; none is silently discarded.
+- 2,955 duplicate/navigation/unreachable records pruned.
+- Report status: accepted.
+
+Correctness repairs during convergence:
+- Restored missing `[R166]` marker from the source anchor.
+- Recovered Delta's final source-specific prerequisites directly from source units.
+- Deterministically split 38 Qbits source records that repeatedly failed strict model-unit validation.
+- Excluded machine comments, tables, display math, and site controls from prose-density/teaching expansion accounting.
+
+Verification:
+- `bun run check`: 48 tests passed, 142 expectations.
+- All configured binaries, including the teaching-record builder, outward expander, pruner, and assembler, bundled successfully.
+- Delta and Qbits teaching documents differ from their sources and satisfy their current `accepted: true` reports.
+
+Final authority:
+- Delta teaching document: `articles/delta-nets/document.teaching.md`.
+- Qbits teaching document: `articles/qbits/document.teaching.md`.
+- Source anchors and unresolved issue comments remain embedded for future evidence-backed enrichment.
+
+Signature: Codex GPT-5
+
+## 2026-08-28 17:00:07 CEST
+
+Teaching-expansion contract decision:
+- Cognitive decompression expands outward through prerequisite dependencies, not only inward by splitting source sentences.
+- Example path: beta reduction → substitution → argument term / bound variable → free variables / capture avoidance / alpha-renaming.
+- Every iteration extracts concepts in the new explanation that still require prior knowledge and adds separate prerequisite nodes.
+
+Required expansion-node fields:
+- `derivedFrom`
+- `expansionDepth`
+- `role` (`definition`, `mechanism`, `prerequisite`, `example`, `limitation`, or evidence interpretation)
+- `requiredBy` / dependency edges
+- `epistemicStatus`
+- source or citation provenance
+- density score
+
+Citation policy:
+- Standard common knowledge may be added without an external citation only as `model_common_knowledge`.
+- Source-specific claims, measurements, numerical results, theorem/history attribution, disputed claims, and externally verified facts require citations.
+- Model-generated knowledge is never attributed to the source.
+
+Convergence gates:
+- all terms required by the target explanation are defined to the declared reader baseline;
+- every dense node is decomposed into focused teaching units;
+- cycles and duplicate concepts are canonicalized;
+- no high-impact prerequisite remains unresolved;
+- expansion stops at the reader baseline rather than drifting into an encyclopedia.
+
+Signature: Codex GPT-5
+
+## 2026-08-28 16:53:27 CEST
+
+Objective correction:
+Reject the prior Delta and Qbits document outputs after the owner fidelity/decompression audit and replace the free-form authoring contract.
+
+Owner-reported audit (authoritative):
+- Delta `document.md` is a condensed rewrite: 4,250 versus 8,748 source words and 54 versus 101 headings. Its organization may be better, but it removes reader-oriented explanation and detail.
+- Qbits `document.md` is content-faithful only because its body byte-matches `source.md` after a short preface. It preserves content but performs no cognitive decompression.
+- PDF page-count differences are packaging diagnostics, not proof of decompression.
+
+Systemic cause:
+- Graph validation, source coverage, issue-comment preservation, and paragraph-density checks were incorrectly treated as sufficient document-product gates.
+- The final model was allowed to perform a free-form rewrite, so it could either compress the graph into a shorter summary or preserve the source without teaching expansion.
+- Neither output enforced a one-to-one source/graph-node-to-teaching-record contract.
+
+Authority downgrade:
+- Delta `document.md` / `document.rebuilt.md`: non-authoritative condensed drafts.
+- Qbits `document.md`: authoritative source-faithful conversion, but not a teaching/decompression product.
+- Qbits `document.rebuilt.md`: non-authoritative until source-node expansion mapping is proven.
+- Delta `graph.final.json`, Qbits `graph.complete.json`, source Markdown, overlays, chapter manifests, and issue metadata remain valid regeneration inputs.
+
+Replacement document contract:
+1. Create one traceable teaching record for every source-grounded graph idea.
+2. Preserve exact equations, code, citations, qualifications, and provenance.
+3. Expand every dense node into at least two teaching units unless explicitly marked atomic.
+4. Add prerequisites, logical bridges, derivations, examples, evidence interpretation, and limitations as separate labeled units.
+5. Assemble teaching records deterministically in dependency order; the model may elaborate units but may not select source knowledge for deletion.
+6. Preserve unresolved gaps and issue metadata visibly.
+
+Acceptance gates:
+- 100% non-gap source/recovery-node mapping to teaching records.
+- 100% protected equation/code and citation retention.
+- 100% dense-node expansion or explicit atomic exemption.
+- Zero dense final prose.
+- Zero silently removed issue IDs.
+- No net word-count contraction for these dense technical sources.
+- Output must differ pedagogically from a byte-faithful source copy.
+
+Next actions:
+- Implement source-node teaching records, bounded additive expansion, and deterministic assembly.
+- Regenerate Delta first as the smaller convergence case.
+- Regenerate Qbits only after Delta satisfies every decompression gate.
+
+Negative-memory status:
+Recorded: preservation, structural validity, and paragraph splitting are necessary but insufficient. The product is cognitive expansion with traceable knowledge retention.
+
+Signature: Codex GPT-5
+
 ## 2026-08-28 16:14:54 CEST
 
 Objective completed:

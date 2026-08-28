@@ -237,6 +237,61 @@ Related tools:
 
 Statuses such as `citation_needed` must remain visible. A model-generated URL or confidence value is not verified evidence.
 
+## Authoritative cognitive decompression: expand outward
+
+Free-form graph-to-document rewriting is not the product path. It can compress source knowledge into a shorter summary or reproduce the source without adding explanatory power.
+
+The authoritative path creates traceable teaching records, expands prerequisite dependencies iteratively, prunes graph-variant duplicates, and assembles deterministically:
+
+```bash
+# One immutable teaching record per source-grounded graph idea.
+REFINE_DENSITY_FALLBACK_WORDS=64 \
+bun run build-teaching-records -- \
+  graph.complete.json teaching-records.json definition-resolution-overlay.complete.json
+
+# Dense source record → focused source units → missing prerequisites →
+# prerequisite definitions at the next depth.
+REFINE_MODEL=openai-codex/gpt-5.6-luna \
+REFINE_THINKING=medium \
+REFINE_SERVICE_TIER=priority \
+REFINE_CONCURRENCY=16 \
+REFINE_TEACHING_BATCH_SIZE=8 \
+REFINE_TEACHING_MAX_DEPTH=2 \
+bun run expand-teaching-records -- \
+  teaching-records.json teaching-records.expanded.json teaching-expansion-run
+
+# Remove site navigation, duplicate graph variants, and redundant exact-source
+# fallbacks while retaining every prerequisite reachable from source knowledge.
+bun run prune-teaching-records -- \
+  graph.complete.json teaching-records.expanded.json teaching-records.pruned.json \
+  'Main content heading'
+
+# Dependency-ordered assembly with hard decompression metrics.
+REFINE_DOCUMENT_TITLE='Cognitively Decompressed Guide' \
+bun run assemble-teaching-document -- \
+  teaching-records.pruned.json document.teaching.md document.teaching.report.json
+```
+
+Every generated teaching unit records:
+
+- `derivedFrom`
+- `expansionDepth`
+- teaching role
+- prerequisite concepts
+- `epistemicStatus`
+- source/citation provenance
+
+Common textbook knowledge may use `model_common_knowledge` without a citation. Measurements, numerical claims, source-specific results, theorem/history attribution, and disputed claims require citations.
+
+The assembler accepts a document only when:
+
+- every retained source record maps to visible teaching units;
+- every dense source record has the required focused units;
+- no expansion record remains pending;
+- all source citation labels remain visible;
+- prose density is zero;
+- output does not contract relative to the dense source.
+
 ## Phase 5: document generation
 
 Normal graph-to-document generation:
