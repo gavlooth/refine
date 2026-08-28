@@ -1,3 +1,134 @@
+## 2026-08-28 16:14:54 CEST
+
+Objective completed:
+Apply the repaired-shard/variant-merge/graded-annotation/document-density workflow to Delta-Nets after completing Qbits.
+
+Delta repair:
+- Original Delta run: one clean shard and five salvaged shards.
+- `graph.repaired.json`: five failed shards reprocessed with flat Luna leaves.
+- `graph.final.json`: deduplicated union of original, repaired, and prior expanded/resolved variants.
+- Final graph: 1,110 nodes, 691 edges, 12 evidence frames, 100% source coverage, no validation errors.
+
+Delta document:
+- `source.annotated.md` contains 41 graded issue records.
+- `document.rebuilt.md`: 353 lines, 2,129 words, 25,768 bytes.
+- Document audit: 0 dense paragraphs; 41/41 issue IDs retained or explicitly resolved; 0 silently dropped.
+
+Qbits final artifacts:
+- `graph.complete.json`: 13,438 nodes, 7,050 edges, 394 evidence frames, 100% source coverage, no validation errors.
+- `chapters/`: 64 stable-ID section packages with graph, source, annotated source, definitions, issues, and cross-section dependencies.
+- `document.rebuilt.md`: 35,985 lines, 193,141 words, 1,671,304 bytes.
+- Whole-book audit: 64/64 sections, 829/829 issue IDs retained/resolved, 0 missing documents, 0 dense prose paragraphs.
+
+Implementation additions:
+- Lossless flat shard repair with exact-source fallback and manifest-checked caches.
+- Variant graph merger retaining unique nodes, topology, evidence frames, and repair annotations.
+- Graded Markdown issue annotator and comment-preservation gate.
+- Stable chapter graph partitioner and automated book generator.
+- Lossless sentence-boundary decompression plus targeted residual paragraph rewriting.
+- Document density scanner now excludes machine comments, table-like zero-sentence blocks, and display math.
+
+Verification:
+- `bun run check`: 44 tests passed, 127 expectations; all configured binaries bundled.
+
+Current recommendation:
+Use Qbits `document.rebuilt.md` / `graph.complete.json` and Delta `document.rebuilt.md` / `graph.final.json` as the final teaching and graph artifacts. Preserve all `refine:issue` comments for later evidence-backed enrichment.
+
+Signature: Codex GPT-5
+
+## 2026-08-28 15:52:14 CEST
+
+Objective completed:
+Recover Qbits shard content, merge graph variants without discarding either run, add graded issue metadata, generate chapter artifacts, and assemble a density-gated final textbook.
+
+Graph recovery:
+- `articles/qbits/graph.repaired.json`: 11,018 nodes, 4,518 edges, 304 evidence frames, 100% source coverage.
+- Repair reused 50 complete checkpoints and repaired 69 remaining original shards with flat approximately 4k leaves.
+- Failed leaves preserve exact source text and create explicit `repair_source_fallback` / `repair_parsing_error` annotations.
+- `articles/qbits/graph.complete.json` merges original and repaired variants: 13,438 nodes, 7,050 edges, 394 evidence frames, 100% coverage, no validation errors.
+
+Graded coverage and partitioning:
+- `bin/annotate-markdown.mjs` emits `extracted`, `source_fallback`, and `unresolved` source-unit status plus adjacent `refine:issue` comments.
+- `articles/qbits/source.annotated.md` and `.issues.json` preserve 840 issue records.
+- `bin/partition-graph-by-chapter.mjs` produced 64 stable-ID section directories under `articles/qbits/chapters`, each with graph, source, annotated source, issue manifest, definitions, and cross-section dependencies.
+
+Document generation:
+- Initial direct generation preserved all issue IDs but many model outputs failed the density gate and fell back to annotated source.
+- Lossless sentence-boundary decompression added 1,661 paragraph boundaries without deleting sentences.
+- Targeted model rewrite reduced residual true prose density; scanner fixes excluded HTML issue comments, tables without prose sentences, and display-math blocks.
+- Final assembly: `articles/qbits/document.rebuilt.md`.
+- Size: 35,985 lines, 193,141 words, 1,671,304 bytes.
+- Report: 64/64 sections present, 829/829 issue IDs retained or explicitly resolved, 0 missing issue IDs, 0 dense prose paragraphs.
+
+Definition overlay:
+- `articles/qbits/definition-resolution-overlay.complete.json` contains candidate definitions for 1,694/1,694 definition gaps.
+- 426 are source-backed or externally cited; 1,268 remain explicit `citation_needed` candidates.
+- The authoritative graph's empty gaps were not overwritten.
+
+Verification:
+- `bun run check`: 44 tests passed, 127 expectations; all configured binaries bundled.
+- Focused tests cover stable shard-index remapping, manifest-safe cache reuse, exact-source fallback, graph-variant merging, graded comments, comment preservation, dense-paragraph rejection, lossless prose splitting, and targeted replacement.
+
+Current recommendation:
+Use `document.rebuilt.md` as the Qbits teaching edition and `graph.complete.json` as its complete graph authority. Retain issue comments for later evidence-backed enrichment. Apply the same repaired-shard/merge flow to Delta-Nets before regenerating its graph and document.
+
+Signature: Codex GPT-5
+
+## 2026-08-28 14:31:45 CEST
+
+Objective in progress:
+Recover semantic content lost during the original large Qbits extraction, rebuild a stable global graph, and regenerate the textbook through chapter-level density-gated synthesis.
+
+Root cause and invalidated approach:
+- The first Qbits run used one global source with 119 internal chunks; 34 chunks validated and 85 were salvaged after timeouts or malformed responses.
+- The resulting graph had 100% source coverage but incomplete semantic nodes, topology, and evidence in failed chunks.
+- Recursive repair was ROI-poor because every parent failure consumed a model call before splitting. It also exposed cache identity drift when partition sizes changed.
+
+Current repair design:
+- `bin/repair-sharded-graph.mjs` reuses clean original shard JSON and stable global source-unit IDs.
+- Failed shards are immediately partitioned into approximately 4k-character leaves.
+- Each leaf gets one bounded semantic attempt. A failure preserves exact source text, adds `repair_source_fallback`, and creates a typed `parsing_error` gap.
+- Shard-local indexes are remapped before global assembly. Concepts and cross-shard dependencies are reconciled only after all shards exist.
+- Cache entries are reused only when they validate against the current shard manifest.
+
+Live process and checkpoint:
+- Process: `repair-qbits-shards-flat-luna8`.
+- Model: `openai-codex/gpt-5.6-luna`, low thinking, priority tier.
+- Concurrency: 8; 90-second cap per leaf; no retries.
+- 34 original clean shards plus 71 repaired shards are complete: 105/119 accounted for, 14 remaining.
+- Repair checkpoints: `articles/qbits/run-repair-flat/extraction`.
+- Final repaired graph is not yet written; existing Qbits source, graph, chunks, and document remain unchanged.
+
+Graded-coverage/document design:
+- `bin/annotate-markdown.mjs` assigns source-unit status `extracted`, `source_fallback`, or `unresolved`.
+- Fallback/unresolved units receive adjacent invisible `<!-- refine:issue {...} -->` metadata.
+- The document agent may enrich an issue only with supported information and replace it with a matching `refine:resolved` comment; otherwise the original issue comment must survive.
+- `generate-document.mjs` rejects silent issue-comment loss and rejects dense prose paragraphs (35+ words with 4+ sentences, or 90+ words).
+- The user's dense electronic-structure example is a regression fixture and is rejected.
+
+Definition overlay state:
+- `articles/qbits/definition-resolution-overlay.complete.json` contains one record for all 1,694 definition gaps.
+- Every record has candidate definition text; 426 are source-backed or externally cited, and 1,268 remain explicitly `citation_needed`.
+- The authoritative graph's empty gaps remain unchanged.
+
+Next actions:
+1. Let the active flat repair finish and validate `graph.repaired.json`.
+2. Generate annotated Qbits Markdown plus issue manifest from the repaired graph.
+3. Partition the repaired graph and annotated source by chapter while preserving stable IDs and cross-chapter dependency metadata.
+4. Generate chapters with the density/comment gates.
+5. Assemble and audit the final Qbits document.
+6. Queue Delta-Nets through the same repaired-shard workflow; its original run had one clean and five salvaged shards.
+
+Verification already passed:
+- Focused tests cover stable index merging, exact-source fallback, annotation insertion/preservation, and dense-paragraph rejection.
+- Generated artifacts remain ignored by Git and present on disk.
+
+Dependencies/blockers:
+- No user decision is required.
+- Jujutsu still refuses to snapshot generated artifacts over the repository's 1 MiB new-file limit; code/checkpoint files remain snapshot-compatible.
+
+Signature: Codex GPT-5
+
 ## 2026-08-28 07:46:26 CEST
 
 Objective completed:

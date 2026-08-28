@@ -685,7 +685,8 @@ async function main() {
 if (import.meta.main) await main();
 
 export {
-  GRAPH_SCHEMA_VERSION, parseSourceUnits, buildChunks, parseJsonValue, validateExtraction, normalizeConcept,
+  GRAPH_SCHEMA_VERSION, GRAPH_SYSTEM_PROMPT, extractionTask,
+  parseSourceUnits, buildChunks, parseJsonValue, validateExtraction, normalizeConcept,
   addCoverageFallbacks, assembleGraph, conceptIndex, reconcileConcepts, validateGraph,
   serializableGraph, mapConcurrent, salvageFailedChunk, salvageExtraction, writeJsonAtomic,
 };
